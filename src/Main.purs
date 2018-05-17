@@ -2,59 +2,42 @@ module Main where
 
 import Prelude
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (log)
-import Checkers (Player(Red, Black, Neither), State, Model)
-import DOM.Event.EventTarget
-import DOM.Event.Types
-import DOM.HTML.Document (body)
-import DOM.Node.Types
-import DOM.Event.MouseEvent
+import Checkers (Player(Red, Black, Neither), State, Model, Board)
+import Checkers.Event (onMouseClick)
 import DOM.HTML (window)
+import DOM.HTML.Types (htmlDocumentToDocument)
 import DOM.HTML.Window (document)
-import DOM.HTML.Types
-import Control.Monad.Except (runExcept)
+import DOM.Node.Types (Element, ElementId(ElementId), documentToNonElementParentNode)
 import DOM.Node.NonElementParentNode (getElementById)
+import DOM.Event.EventTarget (addEventListener, eventListener)
 import DOM.Classy.Event.EventTarget (toEventTarget)
 import DOM.HTML.Event.EventTypes (click)
-import DOM.Node.ParentNode (QuerySelector(..), querySelector)
-import Control.Monad.Eff.Ref (REF, readRef, modifyRef, newRef)
 import Partial.Unsafe (unsafePartial)
 import Checkers.World (render)
 import Data.Tuple (Tuple(..))
-import Data.Foldable (for_)
-import Data.Maybe (Maybe(..), fromJust, maybe)
-import Data.Either (Either(..), either)
-import Control.Monad.Eff.Ref (REF, readRef, modifyRef, newRef)
-import Unsafe.Coerce (unsafeCoerce)
+import Data.Maybe (Maybe(..), fromJust)
+import Control.Monad.Eff.Ref (REF, Ref(..), readRef, modifyRef, newRef)
 
-initialState :: State
-initialState = [
-                [Neither,  Black, Neither,  Black,  Neither,  Black,  Neither,  Black],
-                [ Black,  Neither,  Black,  Neither,  Black,  Neither,  Black,  Neither],
-                [ Neither,  Black,  Neither,  Black,  Neither,  Black,  Neither,  Black],
-                [ Neither,  Neither,  Neither,  Neither,  Neither,  Neither,  Neither,  Neither],
-                [ Neither,  Neither,  Neither,  Neither,  Neither,  Neither,  Neither,  Neither],
-                [Red,  Neither, Red,  Neither, Red,  Neither, Red,  Neither],
-                [ Neither, Red,  Neither, Red,  Neither, Red,  Neither, Red],
-                [Red,  Neither, Red,  Neither, Red,  Neither, Red,  Neither]
-              ]
+
+initialBoard :: Board
+initialBoard =  {
+                  _0: {_0: Neither, _1: Black, _2: Neither, _3: Black, _4: Neither, _5: Black, _6: Neither, _7: Black},
+                  _1: {_0: Black, _1: Neither, _2: Black, _3: Neither, _4: Black, _5: Neither, _6: Black, _7: Neither},
+                  _2: {_0: Neither, _1: Black, _2: Neither, _3: Black, _4: Neither, _5: Black, _6: Neither, _7: Black},
+                  _3: {_0: Neither, _1: Neither, _2: Neither, _3: Neither, _4: Neither, _5: Neither, _6: Neither, _7: Neither},
+                  _4: {_0: Neither, _1: Neither, _2: Neither, _3: Neither, _4: Neither, _5: Neither, _6: Neither, _7: Neither},
+                  _5: {_0: Red, _1: Neither, _2: Red, _3: Neither, _4: Red, _5: Neither, _6: Red, _7: Neither},
+                  _6: {_0: Neither, _1: Red, _2: Neither, _3: Red, _4: Neither, _5: Red, _6: Neither, _7: Red},
+                  _7: {_0: Red, _1: Neither, _2: Red, _3: Neither, _4: Red, _5: Neither, _6: Red, _7: Neither}
+                }
 
 initialModel :: Model
-initialModel = {state: initialState, mouse: Tuple 1 1, turn: Red}
-
-toMouseEvent :: forall a. Event -> Maybe MouseEvent
-toMouseEvent = either (const Nothing) Just <<< runExcept <<< eventToMouseEvent
-
-onMouseClick :: Event -> Eff _ Unit
-onMouseClick ev = do
-  let x = maybe 0 pageX (toMouseEvent ev)
-  log (show x)
+initialModel = {state: initialBoard, mouse: Tuple 0 0, turn: Red, selected: Nothing, agentThinking: false}
 
 main :: Eff (_) Unit
 main = void $ unsafePartial do
   document <- htmlDocumentToDocument <$> (document =<< window)
-  canvasEl :: Maybe Element <- getElementById  (ElementId "canvas") (documentToNonElementParentNode document)
-  let canvasEl' = toEventTarget (unsafePartial (fromJust canvasEl))
-  addEventListener click (eventListener onMouseClick) false canvasEl'
+  canvas :: Maybe Element <- getElementById  (ElementId "canvas") (documentToNonElementParentNode document)
+  let canvas' = toEventTarget (unsafePartial (fromJust canvas))
+  addEventListener click (eventListener (onMouseClick)) false canvas'
   render initialModel
-
