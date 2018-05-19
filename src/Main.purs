@@ -32,12 +32,13 @@ initialBoard =  {
                 }
 
 initialModel :: Model
-initialModel = {state: initialBoard, mouse: Tuple 0 0, turn: Red, selected: Nothing, agentThinking: false}
+initialModel = {board: initialBoard, turn: Red, selected: Nothing, agentThinking: false}
 
 main :: Eff (_) Unit
 main = void $ unsafePartial do
+  ref :: Ref Model <- newRef initialModel
   document <- htmlDocumentToDocument <$> (document =<< window)
   canvas :: Maybe Element <- getElementById  (ElementId "canvas") (documentToNonElementParentNode document)
   let canvas' = toEventTarget (unsafePartial (fromJust canvas))
-  addEventListener click (eventListener (onMouseClick)) false canvas'
-  render initialModel
+  addEventListener click (eventListener (onMouseClick ref)) false canvas'
+  render ref

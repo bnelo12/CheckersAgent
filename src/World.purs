@@ -4,10 +4,12 @@ import Prelude
 import Data.Array ((..))
 import Control.Monad.Eff (Eff)
 import Data.FoldableWithIndex (forWithIndex_)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Graphics.Canvas (CANVAS, Context2D, setFillStyle, setStrokeStyle, strokePath, fillRect, arc, fillPath, getCanvasElementById, getContext2D)
+import Control.Monad.Eff.Ref (REF, Ref(..), readRef, modifyRef, newRef)
+import Partial.Unsafe (unsafePartial)
 
 import Math as Math
 
@@ -48,21 +50,27 @@ drawState board ctx = void do
         Red -> drawPiece Red {x: toNumber j, y: toNumber i} ctx
         Black -> drawPiece Black {x: toNumber j, y: toNumber i} ctx
 
-drawSelector :: ∀ eff. Position -> Context2D -> Eff (canvas :: CANVAS | eff) Unit
-drawSelector pos ctx = void do
+drawSelector :: ∀ eff. Context2D -> Position -> Eff (canvas :: CANVAS | eff) Unit
+drawSelector ctx pos = void do
   _ <- setStrokeStyle "#f4d942" ctx
-  let path = arc ctx {x: pos.x*cellWidth + cellWidth/2.0, y: pos.y*cellWidth + cellWidth/2.0, r: 30.0, start: 0.0, end: Math.pi * 2.0}
+  let path = arc ctx {x: pos.x*cellWidth + cellWidth/2.0, y: pos.y*cellWidth + cellWidth/2.0, r: 28.0, start: 0.0, end: Math.pi * 2.0}
   strokePath ctx path
 
-render :: ∀ eff. Partial => Model -> (Eff (canvas :: CANVAS | eff) Unit)
-render model =
+render :: ∀ eff. Partial => Ref Model -> (Eff _ Unit)
+render ref =
   void do
     Just canvas <- getCanvasElementById "canvas"
     ctx <- getContext2D canvas
     _ <- drawBoard ctx
-    drawState model.state ctx
+    model <- readRef ref
+    _ <- drawState model.board ctx
+    maybe (pure unit) (drawSelector ctx) model.selected
 
-update :: ∀ eff. Model -> (Eff (canvas :: CANVAS | eff) Unit)
-update model = do
-  pure unit
+update :: ∀ eff.  Ref Model -> (Eff _ Unit)
+update ref = do
+  model <- readRef ref
+  if model.agentThinking 
+    then pure unit
+    else unsafePartial $ render ref
+
 
