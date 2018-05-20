@@ -13,7 +13,7 @@ import Partial.Unsafe (unsafePartial)
 
 import Math as Math
 
-import Checkers (Player(Red, Black, Neither), Position, State, Model, Point, Board, getBoardState)
+import Checkers (Player(Red, Black, Neither), Position, Model, Point, Board, getBoardState)
 
 boardWidth :: Number
 boardWidth = 600.0
